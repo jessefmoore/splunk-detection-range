@@ -1,0 +1,5 @@
+*.retry
+.ansible/
+*.swp
+.DS_Store
+.claude/

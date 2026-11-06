@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: art_psmodule_prereq
+  author: grayhats
+  description: Updates NuGet/PowerShellGet on Windows targets before any win_psmodule task runs
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - windows
+    - powershell
+
+dependencies: []

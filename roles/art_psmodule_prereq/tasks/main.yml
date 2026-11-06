@@ -1,0 +1,29 @@
+---
+# Windows 11's inbox PowerShellGet (v1.0.0.1) doesn't support the
+# -AcceptLicense parameter that community.windows.win_psmodule passes to
+# Install-Module. j91321.atomic_red_team's "Install powershell-yaml
+# Dependency" task fails on a fresh win11-22h2-x64-enterprise-template with:
+#   "A parameter cannot be found that matches parameter name 'AcceptLicense'"
+# Fix: update the NuGet provider and PowerShellGet itself before any
+# win_psmodule task runs. Must run as raw PowerShell since the chicken-and-egg
+# problem is PowerShellGet itself being too old to update cleanly otherwise.
+
+- name: Ensure TLS 1.2 is used for PowerShell Gallery requests
+  ansible.windows.win_shell: |
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+- name: Ensure the NuGet package provider is current
+  ansible.windows.win_shell: |
+    $provider = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
+    if (-not $provider -or $provider.Version -lt [version]"2.8.5.201") {
+      Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope AllUsers
+    }
+  changed_when: false
+
+- name: Ensure PowerShellGet is updated beyond the Windows inbox version
+  ansible.windows.win_shell: |
+    $current = (Get-Module -ListAvailable -Name PowerShellGet | Sort-Object Version -Descending | Select-Object -First 1).Version
+    if (-not $current -or $current -lt [version]"2.2.5") {
+      Install-Module -Name PowerShellGet -Force -AllowClobber -Scope AllUsers -SkipPublisherCheck
+    }
+  changed_when: false
