@@ -200,7 +200,7 @@ global_role_vars:
   # needs a literal IP. PLACEHOLDER until the range is created and the real
   # 2nd octet is known: 10.<range_number>.40.35. Fill in before deploying,
   # per the build process note at the top of this file.
-  ludus_ar_windows_splunk_ip: "REPLACE_AFTER_CREATE_RANGE"
+  ludus_ar_windows_splunk_ip: "10.31.40.35"   # DS-splunk01, rangeNumber 31
   ludus_ar_windows_password: "GrayHats-DSSplunkUF-2026!"
   # --- Atomic Red Team (j91321.atomic_red_team) ---
   atomics_repo_owner: "redcanaryco"

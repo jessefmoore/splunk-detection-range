@@ -2,11 +2,11 @@
 
 | Hostname | VLAN | IP | Template | Specs | Ansible roles |
 |---|---|---|---|---|---|
-| **DS-dc01** | 10 | 10.\<range_number\>.10.31 | `win2025-server-x64-tpm-template` | 8GB RAM (min 4), 4 vCPU | `p4t12ick.ludus_ar_windows`, `frack113.ludus_caldera_agent` |
-| **DS-win01** | 10 | 10.\<range_number\>.10.32 | `win11-22h2-x64-enterprise-template` | 6GB RAM (min 3), 2 vCPU | `p4t12ick.ludus_ar_windows`, `frack113.ludus_caldera_agent` |
-| **DS-caldera01** | 10 | 10.\<range_number\>.10.33 | `ubuntu-24.04-x64-server-template` | 6GB RAM (min 3), 4 vCPU | `frack113.ludus_caldera_server` (auto-pulls `geerlingguy.docker`) |
-| **DS-artwin01** | 30 | 10.\<range_number\>.30.34 | `win11-22h2-x64-enterprise-template` | 4GB RAM (min 2), 2 vCPU | `art_psmodule_prereq` (custom), `j91321.atomic_red_team` |
-| **DS-splunk01** | 40 | 10.\<range_number\>.40.35 | `ubuntu-24.04-x64-server-template` | 12GB RAM (min 6), 4 vCPU | `p4t12ick.ludus_ar_splunk` |
+| **DS-dc01** | 10 | 10.31.10.31 | `win2025-server-x64-tpm-template` | 8GB RAM (min 4), 4 vCPU | `p4t12ick.ludus_ar_windows`, `frack113.ludus_caldera_agent` |
+| **DS-win01** | 10 | 10.31.10.32 | `win11-22h2-x64-enterprise-template` | 6GB RAM (min 3), 2 vCPU | `p4t12ick.ludus_ar_windows`, `frack113.ludus_caldera_agent` |
+| **DS-caldera01** | 10 | 10.31.10.33 | `ubuntu-24.04-x64-server-template` | 6GB RAM (min 3), 4 vCPU | `frack113.ludus_caldera_server` (auto-pulls `geerlingguy.docker`) |
+| **DS-artwin01** | 30 | 10.31.30.34 | `win11-22h2-x64-enterprise-template` | 4GB RAM (min 2), 2 vCPU | `art_psmodule_prereq` (custom), `j91321.atomic_red_team` |
+| **DS-splunk01** | 40 | 10.31.40.35 | `ubuntu-24.04-x64-server-template` | 12GB RAM (min 6), 4 vCPU | `p4t12ick.ludus_ar_splunk` |
 
 This range mirrors the sibling `elastic-detection-range` (range `DE`) exactly
 in shape — same VLAN layout, same VM count, same Caldera/ART setup — with
@@ -67,7 +67,7 @@ the role's actual `defaults/main.yml` (default value `10.2.20.1`, clearly a
 placeholder meant to be overridden). No Ludus-native auto-discovery or
 `depends_on`-equivalent exists for this value, so the build process is:
 1. `createRange` first, to learn the auto-assigned range number.
-2. Compute `DS-splunk01`'s real IP (`10.<range_number>.40.35`).
+2. Compute `DS-splunk01`'s real IP (`10.31.40.35`).
 3. Fill that IP into `global_role_vars.ludus_ar_windows_splunk_ip` in
    `ds-range.yml` before pushing config / deploying.
 

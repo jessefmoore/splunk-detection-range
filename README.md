@@ -84,9 +84,8 @@ scripts/create-team-user.sh DSTEAM1 "Detection Range Team 1 - Splunk" dsteam1@gr
 
 ## Status
 
-- [ ] Range `DS` not yet created
+- [x] Range `DS` created (rangeNumber 31, IP scheme `10.31.<VLAN>.<octet>`)
 - [x] Roles confirmed installed on the Ludus server
-- [ ] Team user `DSTEAM1` not yet created
-- [ ] Config not yet pushed — `ludus_ar_windows_splunk_ip` placeholder must
-      be filled in first (needs the range's assigned IP scheme)
-- [ ] Not yet deployed
+- [x] Team user `DSTEAM1` created, assigned console-only access to `DS`
+- [x] Config pushed (`ludus_ar_windows_splunk_ip` filled in as `10.31.40.35`)
+- [ ] **Not yet deployed** — `deployRange` has not been run yet.

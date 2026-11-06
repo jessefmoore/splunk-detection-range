@@ -1,6 +1,6 @@
 # DS — Network
 
-**Range ID:** `DS`  **Range number:** TBD (filled in after `createRange`)  **IP scheme:** `10.<range_number>.<VLAN>.<octet>`
+**Range ID:** `DS`  **Range number:** `31`  **IP scheme:** `10.31.<VLAN>.<octet>`
 
 The 2nd octet is auto-assigned by Ludus on `POST /ranges/create` — not chosen
 by us, mirroring the DE range's convention.
