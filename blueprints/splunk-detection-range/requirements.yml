@@ -1,0 +1,13 @@
+roles:
+    - name: art_psmodule_prereq
+      version: "null"
+    - name: frack113.ludus_caldera_agent
+      version: v0.3.0
+    - name: frack113.ludus_caldera_server
+      version: v0.5.2
+    - name: j91321.atomic_red_team
+      version: main
+    - name: p4t12ick.ludus_ar_splunk
+      version: v1.1.3
+    - name: p4t12ick.ludus_ar_windows
+      version: v1.1.2

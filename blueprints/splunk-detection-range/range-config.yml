@@ -1,0 +1,208 @@
+# yaml-language-server: $schema=https://docs.ludus.cloud/schemas/range-config.json
+# =============================================================================
+# DS — Splunk Detection Range  (splunk-detection-range)
+# =============================================================================
+# Mirrors the sibling elastic-detection-range (range DE) exactly in shape —
+# same VLAN layout, same VM count, same Caldera/ART setup — swapping the
+# Elastic stack for Splunk:
+#   badsectorlabs.ludus_elastic_container -> p4t12ick.ludus_ar_splunk
+#   badsectorlabs.ludus_elastic_agent     -> p4t12ick.ludus_ar_windows
+#
+# Range ID:      DS    (2nd IP octet auto-assigned by Ludus at range creation)
+# AD Domain:     grayhats.local  (NetBIOS GRAYHATS) — same name as the DE
+#                range's domain, fully isolated network, no conflict.
+# Domain Ctrlr:  DS-dc01 @ 10.<range_number>.10.31
+#
+# Deploy (Ludus v2, via the Ludus MCP server — no local ludus CLI):
+#   1. createRange   (rangeID: DS)               -> learn the assigned range number
+#   2. Compute DS-splunk01's real IP from that range number and fill in
+#      global_role_vars.ludus_ar_windows_splunk_ip below (see TEMPLATE/IP
+#      WIRING note) — p4t12ick.ludus_ar_windows has no auto-discovery
+#      (unlike the Elastic/Caldera roles), it needs a literal IP.
+#   3. putConfig      -f ds-range.yml  -r DS
+#   4. deployRange    -r DS                        (1-3 hours for all VMs + AD)
+#
+# Templates: sourced from https://github.com/badsectorlabs/ludus-source-bsl
+# where possible (debian-13 router, win2025-tpm DC). See docs/VMS.md for the
+# win2025-server-x64-tpm-template risk: read directly from ludus-source-bsl's
+# Autounattend.xml — it does NOT configure a forced password change, so the
+# interactive Administrator password prompt seen on the DE range's first two
+# attempts is likely a Windows Server 2025 runtime behavior, not a simple
+# unattend bug. Bad Sector Labs' own ad-elastic-range blueprint uses win2022
+# for its DC despite having win2025-tpm available. Attempting win2025 here
+# per explicit user request; if it fails identically, STOP and ask rather
+# than silently substituting.
+#
+# Role sourcing: p4t12ick.ludus_ar_splunk / ludus_ar_windows (3rd-party
+# Galaxy, confirmed already installed: v1.1.3 / v1.1.2). Caldera
+# (frack113.*) and Atomic Red Team (j91321.* + custom art_psmodule_prereq)
+# reused as-is from the DE range build. See scripts/install-roles.sh.
+# =============================================================================
+
+ludus:
+  # ===========================================================================
+  # VLAN 10 — AD / endpoints being attacked (Caldera) and defended (Splunk)
+  # ===========================================================================
+
+  # --- Active Directory Domain Controller + DNS (Windows Server 2025) ------
+  # win2025-server-x64-tpm-template per explicit request — see risk note
+  # above and docs/VMS.md. Functional level set to Win2025 since this is a
+  # real 2025 DC (not a win2022 substitution like the DE range).
+  - vm_name: "{{ range_id }}-dc01"
+    hostname: "{{ range_id }}-dc01"
+    template: win2025-server-x64-tpm-template
+    vlan: 10
+    ip_last_octet: 31
+    ram_gb: 8
+    ram_min_gb: 4
+    cpus: 4
+    windows:
+      sysprep: false
+    domain:
+      fqdn: grayhats.local
+      role: primary-dc
+    roles:
+      - p4t12ick.ludus_ar_windows       # detection: Splunk Universal Forwarder + Sysmon/auditing, ships telemetry to DS-splunk01
+      - frack113.ludus_caldera_agent    # offense: Caldera Sandcat agent, auto-enrolls to DS-caldera01
+
+  # --- Windows 11 Desktop (domain member) -----------------------------------
+  - vm_name: "{{ range_id }}-win01"
+    hostname: "{{ range_id }}-win01"
+    template: win11-22h2-x64-enterprise-template
+    vlan: 10
+    ip_last_octet: 32
+    ram_gb: 6
+    ram_min_gb: 3
+    cpus: 2
+    windows:
+      sysprep: false
+    domain:
+      fqdn: grayhats.local
+      role: member
+    roles:
+      - p4t12ick.ludus_ar_windows
+      - frack113.ludus_caldera_agent
+
+  # --- Caldera C2 / Red Team Server (Ubuntu 24.04 LTS) ----------------------
+  # frack113.ludus_caldera_server auto-depends on geerlingguy.docker (already
+  # installed on this server). The agent role on DC01/WIN01 auto-discovers
+  # this VM via Ludus's `search_roles` lookup — no manual IP wiring needed
+  # (unlike the Splunk UF role below, which does need one).
+  - vm_name: "{{ range_id }}-caldera01"
+    hostname: "{{ range_id }}-caldera01"
+    template: ubuntu-24.04-x64-server-template
+    vlan: 10
+    ip_last_octet: 33
+    ram_gb: 6
+    ram_min_gb: 3
+    cpus: 4
+    linux: true
+    roles:
+      - frack113.ludus_caldera_server
+
+  # ===========================================================================
+  # VLAN 30 — Atomic Red Team test bed
+  # ===========================================================================
+
+  # --- Atomic Red Team sandbox (Windows 11) ---------------------------------
+  # Standalone, not domain-joined — mirrors DE-artwin01 exactly for parity.
+  # Note: p4t12ick.ludus_ar_windows (on DC01/WIN01 above) already bundles its
+  # own Atomic Red Team install as a side effect of the Splunk UF setup, but
+  # this dedicated sandbox is kept anyway to match the DE range's shape and
+  # give detection engineers an isolated box to author/validate atomics
+  # before running them for real on DC01/WIN01.
+  - vm_name: "{{ range_id }}-artwin01"
+    hostname: "{{ range_id }}-artwin01"
+    template: win11-22h2-x64-enterprise-template
+    vlan: 30
+    ip_last_octet: 34
+    ram_gb: 4
+    ram_min_gb: 2
+    cpus: 2
+    windows:
+      sysprep: false
+    roles:
+      # art_psmodule_prereq (custom, roles/art_psmodule_prereq, reused as-is
+      # from the DE range repo) must run first: win11-22h2-x64-enterprise-template
+      # ships an inbox PowerShellGet that doesn't support the -AcceptLicense
+      # parameter community.windows.win_psmodule passes to Install-Module.
+      - art_psmodule_prereq
+      - j91321.atomic_red_team
+
+  # ===========================================================================
+  # VLAN 40 — Detection / SIEM
+  # ===========================================================================
+
+  # --- Splunk Enterprise (Ubuntu 24.04 LTS) ---------------------------------
+  - vm_name: "{{ range_id }}-splunk01"
+    hostname: "{{ range_id }}-splunk01"
+    template: ubuntu-24.04-x64-server-template
+    vlan: 40
+    ip_last_octet: 35
+    ram_gb: 12
+    ram_min_gb: 6
+    cpus: 4
+    linux: true
+    roles:
+      - p4t12ick.ludus_ar_splunk
+
+# =============================================================================
+# ROUTER — pinned to debian-13-x64-server-template directly (proven on this
+# server during the DE range build; no need to repeat the debian11->12->13
+# saga here). Sourced from ludus-source-bsl.
+# =============================================================================
+router:
+  template: debian-13-x64-server-template
+
+# =============================================================================
+# NETWORK — flat/ACCEPT so Caldera (VLAN10), ART (VLAN30), and Splunk
+# (VLAN40) all have the cross-VLAN reachability the design calls for, without
+# hand written ACLs. See docs/NETWORK.md for an optional hardened ruleset.
+# =============================================================================
+network:
+  inter_vlan_default: ACCEPT
+  external_default: ACCEPT
+  wireguard_vlan_default: ACCEPT
+
+# =============================================================================
+# DEFAULTS — Active Directory forest settings + global system settings
+# All overridable here; nothing is hardcoded in any role.
+# =============================================================================
+defaults:
+  ad_domain_functional_level: Win2025
+  ad_forest_functional_level: Win2025
+  ad_domain_admin: Administrator
+  ad_domain_admin_password: "GrayHats-DSAdmin-2026!"
+  ad_domain_user: grayhatsuser
+  ad_domain_user_password: "GrayHats-DSUser-2026!"
+  ad_domain_safe_mode_password: "GrayHats-DSSafeMode-2026!"
+  timezone: America/Los_Angeles
+  snapshot_with_RAM: false
+  stale_hours: 0
+
+# =============================================================================
+# GLOBAL ROLE VARS — shared values passed to every role on every VM.
+# (All role variables are namespaced, so unused ones are harmless.)
+# =============================================================================
+global_role_vars:
+  # --- Caldera server (frack113.ludus_caldera_server) ---
+  ludus_caldera_branch: "5.3.0"
+  ludus_caldera_admin_pwd: "GrayHats-DSCalderaAdmin-2026!"
+  ludus_caldera_red_pwd: "GrayHats-DSCalderaRed-2026!"
+  ludus_caldera_blue_pwd: "GrayHats-DSCalderaBlue-2026!"
+  # --- Caldera agent (frack113.ludus_caldera_agent) ---
+  ludus_caldera_windows_agent_name: 'C:\Users\Public\splunkd.exe'
+  # --- Splunk server (p4t12ick.ludus_ar_splunk) ---
+  ludus_ar_splunk_password: "GrayHats-DSSplunk-2026!"
+  # --- Splunk Universal Forwarder (p4t12ick.ludus_ar_windows) ---
+  # TEMPLATE/IP WIRING: this role has no auto-discovery (unlike
+  # badsectorlabs.ludus_elastic_agent's search_roles-based lookup) — it
+  # needs a literal IP. PLACEHOLDER until the range is created and the real
+  # 2nd octet is known: 10.<range_number>.40.35. Fill in before deploying,
+  # per the build process note at the top of this file.
+  ludus_ar_windows_splunk_ip: "10.31.40.35"   # DS-splunk01, rangeNumber 31
+  ludus_ar_windows_password: "GrayHats-DSSplunkUF-2026!"
+  # --- Atomic Red Team (j91321.atomic_red_team) ---
+  atomics_repo_owner: "redcanaryco"
+  atomics_repo_branch: "master"
+  atomics_defender_exclusion: true

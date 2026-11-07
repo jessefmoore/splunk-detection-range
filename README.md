@@ -78,6 +78,141 @@ health (`https://<splunk-ip>:8000`, creds in
 [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md)), Caldera, Atomic Red Team,
 then the end-to-end purple-team loop.
 
+## Deploying on your own Ludus server
+
+The Quick Start above assumes the server this range was originally built
+on, where templates and roles already existed. Starting from a clean Ludus
+server, do this instead:
+
+**1. Clone this repo onto the box with the `ludus` CLI configured.**
+```bash
+git clone https://github.com/jessefmoore/splunk-detection-range.git
+cd splunk-detection-range
+```
+
+**2. Confirm your templates are sourced from `ludus-source-bsl`.**
+This range needs `win2025-server-x64-tpm-template`,
+`win11-22h2-x64-enterprise-template`, `ubuntu-24.04-x64-server-template`, and
+`debian-13-x64-server-template`. The first and last of those are templated
+from [`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
+in this build — see "Template strategy" below. If any are missing, build
+them:
+```bash
+scripts/build-templates.sh
+```
+**If you already have one of these templates built from somewhere other
+than the current `ludus-source-bsl` source** — the stock Ludus template
+repo, or an older local checkout of `ludus-source-bsl` predating a given
+template's definition — rebuild it fresh before trusting it. A stale image
+is exactly what caused DC01 to hang on an interactive Administrator password
+prompt during this range's own build (see "Template strategy" below and
+[`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) for the full
+`deleteTemplate` → `addTemplateFromTar` → `buildTemplates` runbook).
+
+**3. Install the roles**, including the custom one (not on Galaxy):
+```bash
+scripts/install-roles.sh
+ludus ansible role add -d roles/art_psmodule_prereq --force
+```
+
+**4. Create the range — then learn its IP scheme.**
+```bash
+ludus range create --name "Splunk Detection Range" --rangeid DS
+ludus range list -r DS          # note the rangeNumber
+```
+
+**5. Fill in the Splunk server's real IP.**
+`p4t12ick.ludus_ar_windows` (Splunk UF) has no auto-discovery — edit
+`ds-range.yml`:
+```yaml
+global_role_vars:
+  ludus_ar_windows_splunk_ip: "10.<range_number>.40.35"   # DS-splunk01
+```
+
+**6. Push config and deploy.**
+```bash
+scripts/deploy.sh DS
+```
+Expect 1-3 hours; safe to re-run `ludus range deploy -r DS` on a transient
+error (see [`docs/VALIDATION.md`](docs/VALIDATION.md)).
+
+**7. Create team access, then validate.**
+```bash
+scripts/create-team-user.sh DSTEAM1 "Detection Range Team 1 - Splunk" dsteam1@grayhats.local DS
+```
+Walk [`docs/VALIDATION.md`](docs/VALIDATION.md) to confirm AD/DNS, Splunk
+forwarder health, Caldera, and Atomic Red Team are all working end to end.
+
+## Using this repo as a Ludus Blueprint
+
+A Ludus [blueprint](https://docs.ludus.cloud/docs/using-ludus/blueprints/)
+is a **server-side** object — it lives at
+`<ludus_install_path>/blueprints/<id>/` on whichever Ludus server creates
+it, not in a git repo. This repo already contains everything a blueprint
+needs as source material: `ds-range.yml` is the `range-config.yml` Ludus
+expects, and `requirements.yml` declares the Galaxy role dependencies. The
+intended distribution path is: **clone this repo, then register it as a
+blueprint on your own server.**
+
+[`blueprints/splunk-detection-range/`](blueprints/splunk-detection-range/)
+in this repo is a ready-made mirror of that on-disk shape (`blueprint.yml` +
+`range-config.yml` + `requirements.yml`, no `thumbnail.png`) — pulled from
+and confirmed against the Ludus server this range was actually built and
+deployed on. It's a reference, not the live object: creating or updating the
+real blueprint still requires running the commands below against your own
+server.
+
+**1. Create the blueprint from this repo's config.**
+```bash
+ludus blueprint create --id splunk-detection-range --config ./ds-range.yml
+ludus blueprint config edit splunk-detection-range   # optional: name/description/tags
+```
+
+**2. Install its declared dependencies.**
+```bash
+ludus blueprint install splunk-detection-range
+```
+This resolves `requirements.yml`. It does **not** install the custom
+`art_psmodule_prereq` role — blueprint install/export/import never carries
+custom local roles or Packer templates, so install it straight from the
+repo:
+```bash
+ludus ansible role add -d roles/art_psmodule_prereq --force
+```
+
+**3. Share it with specific users or groups on this server.**
+```bash
+ludus blueprint share user  splunk-detection-range <userID...>
+ludus blueprint share group splunk-detection-range <groupName...>
+```
+
+**4. Create and deploy a range from the blueprint.**
+```bash
+ludus range create -r DS -n "Splunk Detection Range" --from-blueprint splunk-detection-range
+# fill in global_role_vars.ludus_ar_windows_splunk_ip now that the range number is known
+ludus range deploy --range-id DS
+```
+
+### Sharing to a different Ludus server (no git access there)
+
+If the other admin can't `git clone`, export a tarball instead — but note
+it still drops the custom role and Packer templates, so they'll need a copy
+of this repo regardless:
+```bash
+ludus blueprint export splunk-detection-range -o splunk-detection-range.tar.gz
+# --- on the other server ---
+ludus blueprint create --import splunk-detection-range.tar.gz
+git clone https://github.com/jessefmoore/splunk-detection-range.git
+ludus ansible role add -d splunk-detection-range/roles/art_psmodule_prereq --force
+```
+
+Given that caveat, cloning the repo directly (step 1 above) is the simpler
+path whenever git access is available.
+
+## License
+
+[MIT](LICENSE) — use freely, no warranty.
+
 ## Topology
 
 | VLAN | Host | Purpose |
