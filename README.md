@@ -18,7 +18,7 @@ is Elastic-only; this one is **Splunk-only**. Same shape, different SIEM.
 
 | VLAN | Host | Purpose |
 |---|---|---|
-| 10 | DS-dc01 | AD DC + DNS (**Windows Server 2025** — see risk note below), Splunk UF + Caldera agent |
+| 10 | DS-dc01 | AD DC + DNS (**Windows Server 2025**, confirmed working — see below), Splunk UF + Caldera agent |
 | 10 | DS-win01 | Windows 11 desktop, Splunk UF + Caldera agent |
 | 10 | DS-caldera01 | Caldera C2 server (Ubuntu 24.04), targets DC01/WIN01 |
 | 30 | DS-artwin01 | Atomic Red Team sandbox (Windows 11), standalone |
@@ -33,15 +33,21 @@ Templates sourced from
 where possible — `debian-13-x64-server-template` (router) and
 `win2025-server-x64-tpm-template` (DC01).
 
-**DC01 risk**: the sibling DE range hit this exact template forcing an
+**DC01 resolved**: the sibling DE range hit this exact template forcing an
 interactive Administrator password change on every clone, blocking WinRM,
-and substituted win2022 instead. For this build, Windows Server 2025 was
-requested explicitly after reading `ludus-source-bsl`'s actual
-`Autounattend.xml` directly — it doesn't configure a forced password
-change, so this is likely a Server 2025 runtime behavior rather than a
-fixable config bug. See [`docs/VMS.md`](docs/VMS.md) for the full
-diagnosis. If DS-dc01 hits the same symptom again, the plan is to stop and
-ask rather than silently substitute.
+and substituted win2022 instead. This range's first attempt (against the
+server's existing, previously-built copy of the template) hit the
+identical symptom. A fresh rebuild from the current `ludus-source-bsl`
+source (`deleteTemplate` → re-register via `addTemplateFromTar` →
+`buildTemplates`) fixed it — DC01 promoted cleanly and the full deploy
+finished with **zero failed tasks across all 6 hosts**. Conclusion: the
+template source itself is fine; the failures were a stale/corrupted
+previously-built image on this specific server, not a Windows Server 2025
+limitation. See [`docs/VMS.md`](docs/VMS.md) for the full investigation and
+[`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) for the exact rebuild
+runbook (including two non-obvious gotchas: `deleteTemplate` removes the
+whole definition, not just the image, and `addTemplateFromTar` requires a
+plain uncompressed `.tar`, not `.tgz`).
 
 ## Roles
 
@@ -81,6 +87,7 @@ scripts/create-team-user.sh DSTEAM1 "Detection Range Team 1 - Splunk" dsteam1@gr
 - [`docs/ACCESS-CONTROL.md`](docs/ACCESS-CONTROL.md) — team user / Proxmox console-only access
 - [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md) — master credential sheet
 - [`docs/VALIDATION.md`](docs/VALIDATION.md) — post-deploy validation checklist
+- [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) — runbook for rebuilding a `ludus-source-bsl` template from scratch
 
 ## Status
 
@@ -88,4 +95,10 @@ scripts/create-team-user.sh DSTEAM1 "Detection Range Team 1 - Splunk" dsteam1@gr
 - [x] Roles confirmed installed on the Ludus server
 - [x] Team user `DSTEAM1` created, assigned console-only access to `DS`
 - [x] Config pushed (`ludus_ar_windows_splunk_ip` filled in as `10.31.40.35`)
-- [ ] **Not yet deployed** — `deployRange` has not been run yet.
+- [x] **Deployed successfully** — all 5 VMs + router up, `rangeState: SUCCESS`,
+      zero failed tasks across every host in the final run. `win2025-server-x64-tpm-template`
+      required a fresh rebuild first (see `docs/VMS.md`/`docs/REBUILD-NOTES.md`)
+      but DC01 promoted cleanly once rebuilt. Splunk UF confirmed installed
+      on DS-dc01/DS-win01, Splunk Enterprise + add-ons on DS-splunk01, ART on
+      DS-artwin01. Live confirmation of forwarder status: Splunk web UI at
+      `https://10.31.40.35:8000` (creds in `docs/CREDENTIALS.md`).

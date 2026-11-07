@@ -20,33 +20,46 @@ when available: `debian-13-x64-server-template` (router) and
 `win2025-server-x64-tpm-template` (DC01) both come from that repo's
 `templates/` directory.
 
-## DC01 template risk: `win2025-server-x64-tpm-template`
+## DC01 template resolution: `win2025-server-x64-tpm-template` — RESOLVED
 
-On the DE range build, this exact template forced an interactive
-Administrator password change on every fresh clone, blocking WinRM before
-AD promotion could run — confirmed twice, identically, via Proxmox console
-and Ansible logs (`DE-dc01: unreachable=1`). That build substituted
-`win2022-server-x64-template` instead.
+**Result: win2025-server-x64-tpm-template now works, after a fresh rebuild.**
+`DS-dc01` promoted cleanly, `DS-win01` joined the domain without issue, and
+the full deploy finished with zero failed tasks across every host.
 
-For this build, the user explicitly asked to use Windows Server 2025 for
-DC01 anyway, informed by reading `ludus-source-bsl`'s actual
-`templates/win2025-server-x64-tpm/Autounattend.xml` directly:
-- It does **not** set `<PasswordExpires>` or any forced-change flag.
-- `<AutoLogon>` is configured for an account named `localuser`, not
-  `Administrator`.
-- So the forced password prompt observed on DE-dc01 is most likely a
-  Windows Server 2025 **runtime** password-complexity re-validation against
-  the weak unattend-set password ("password"), not a simple unattend
-  misconfiguration — not something fixable via range-config alone.
-- Bad Sector Labs' own reference blueprint (`blueprints/ad-elastic-range` in
-  `ludus-source-bsl`) uses `win2022-server-x64-template` for its DC despite
-  having `win2025-server-x64-tpm-template` available — a signal (not a
-  guarantee) that it isn't validated for unattended DC promotion.
+History of this investigation:
+1. On the DE range build, this exact template forced an interactive
+   Administrator password change on every fresh clone, blocking WinRM
+   before AD promotion could run — confirmed twice, identically, via
+   Proxmox console and Ansible logs (`DE-dc01: unreachable=1`). That build
+   substituted `win2022-server-x64-template` instead.
+2. For this build, the user asked to use Windows Server 2025 for DC01
+   anyway. Reading `ludus-source-bsl`'s actual `Autounattend.xml` directly
+   showed no `PasswordExpires` or forced-change flag, and `AutoLogon`
+   configured for `localuser` not `Administrator` — ruling out a simple
+   unattend misconfiguration as the cause.
+3. First DS attempt against the **existing, previously-built copy** of this
+   template on the Ludus server hit the identical `unreachable` symptom —
+   suggesting either a genuinely broken existing build, or a real Server
+   2025 runtime issue.
+4. Rebuilt the template from scratch: `deleteTemplate` (which turned out to
+   remove the whole definition, not just the built image — see
+   `docs/REBUILD-NOTES.md`), re-registered it from a fresh `git clone` of
+   `ludus-source-bsl`'s `templates/win2025-server-x64-tpm/` via
+   `addTemplateFromTar`, then `buildTemplates`. First rebuild attempt failed
+   on an unrelated WinRM/Windows-Update-polling fault during the template's
+   *own* build-time provisioning (`ansible/windows_update_security_updates.yml`);
+   retried and it built clean.
+5. Redeployed `DS` against the freshly rebuilt template: **DC01 promoted
+   successfully this time**, `DS-win01` joined the domain, and the entire
+   deploy completed with 0 failures across all 6 hosts.
 
-**If DS-dc01 hits the same `unreachable` symptom again**: stop and report
-rather than silently substituting win2022 — this is now a deliberate choice,
-not a default, so the user should decide the next step (retry patiently,
-attempt a password-reset workaround, or substitute).
+**Conclusion**: the template definition itself (current `ludus-source-bsl`
+source) is fine. The DE range's failure and this range's *first* attempt
+were most likely caused by a stale/corrupted previously-built image on this
+specific Ludus server, not a flaw in the template source or a Windows
+Server 2025 runtime limitation. If this template ever misbehaves again on
+this server, a fresh rebuild (not a substitution) should be the first thing
+tried — see `docs/REBUILD-NOTES.md` for the exact procedure.
 
 ## Role sourcing (confirmed installed on this server, 2026-11-06)
 
