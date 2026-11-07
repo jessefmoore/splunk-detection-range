@@ -80,6 +80,48 @@ then the end-to-end purple-team loop.
 
 ## Deploying on your own Ludus server
 
+# Share Blueprint with friend that has a different Ludus server
+
+## Use github to obtain local custom roles, etc
+
+```rust
+git clone https://github.com/jessefmoore/splunk-detection-range.git
+```
+
+```rust
+cd splunk-detction-range
+```
+
+## Create range DS
+
+```rust
+ludus range create --name "Splunk Detection Range" -r DS
+```
+
+## add Ansible roles
+
+```rust
+ludus ansible role add -d splunk-detection-range/roles/art_psmodule_prereq --force
+```
+
+OR
+
+```rust
+ludus ansible role add -d roles/art_psmodule_prereq/
+```
+
+# Deploy range
+
+```rust
+./scripts/deploy.sh
+==> Setting range config for DS
+[INFO]  Your range config has been successfully updated.
+```
+
+# Watch the logs
+ludus range logs -f -r DS
+
+
 The Quick Start above assumes the server this range was originally built
 on, where templates and roles already existed. Starting from a clean Ludus
 server, do this instead:
@@ -117,7 +159,7 @@ ludus ansible role add -d roles/art_psmodule_prereq --force
 
 **4. Create the range — then learn its IP scheme.**
 ```bash
-ludus range create --name "Splunk Detection Range" --rangeid DS
+ludus range create --name "Splunk Detection Range" -r DS
 ludus range list -r DS          # note the rangeNumber
 ```
 
@@ -190,7 +232,7 @@ ludus blueprint share group splunk-detection-range <groupName...>
 ```bash
 ludus range create -r DS -n "Splunk Detection Range" --from-blueprint splunk-detection-range
 # fill in global_role_vars.ludus_ar_windows_splunk_ip now that the range number is known
-ludus range deploy --range-id DS
+ludus range deploy -r DS
 ```
 
 ### Sharing to a different Ludus server (no git access there)
