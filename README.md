@@ -14,6 +14,70 @@ is Elastic-only; this one is **Splunk-only**. Same shape, different SIEM.
 - **Built and deployed via the Ludus MCP server** (no local `ludus` CLI used
   for this build; `scripts/*.sh` are provided for CLI-based operation later)
 
+## Quick Start
+
+Deploying this range from scratch (fresh Ludus server, or after a teardown
+of `DS`) takes these steps, in order. Commands shown both ways — via the
+Ludus MCP server (what this repo was actually built with) and the
+equivalent `ludus` CLI command, for whichever you're using.
+
+**1. Confirm/build the templates this range needs.**
+`win2025-server-x64-tpm-template`, `win11-22h2-x64-enterprise-template`,
+`ubuntu-24.04-x64-server-template`, `debian-13-x64-server-template`
+(router). Check with `getTemplates` — if any show `built: false`:
+```bash
+scripts/build-templates.sh                      # CLI
+# or: mcp__ludus__call_ludus_api buildTemplates, body {"templates": [...]}
+```
+If `win2025-server-x64-tpm-template` ever misbehaves (DC01 goes
+`unreachable` during AD promotion), rebuild it fresh before assuming it's
+broken — see [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md). That fixed
+it on this exact server; the template source itself is fine.
+
+**2. Install the roles.**
+```bash
+scripts/install-roles.sh
+```
+This installs the 4 third-party Galaxy roles. `art_psmodule_prereq`
+(custom) needs a one-time tarball upload if this is a server that's never
+seen it — see [`roles/ROLE_CONVENTIONS.md`](roles/ROLE_CONVENTIONS.md).
+
+**3. Create the range — then learn its IP scheme.**
+```bash
+ludus range create --name "Splunk Detection Range" --rangeid DS
+ludus range list -r DS          # note the rangeNumber, e.g. 31
+```
+`p4t12ick.ludus_ar_windows` (Splunk UF) has **no auto-discovery** — unlike
+the Elastic/Caldera roles, it needs a literal IP. So this step has to
+happen *before* you can finalize the config.
+
+**4. Fill in the Splunk server's real IP.**
+Edit `ds-range.yml`:
+```yaml
+global_role_vars:
+  ludus_ar_windows_splunk_ip: "10.<range_number>.40.35"   # DS-splunk01
+```
+
+**5. Push config and deploy.**
+```bash
+scripts/deploy.sh DS
+```
+Expect 1-3 hours. Deploys are idempotent — safe to re-run
+`ludus range deploy -r DS` if it errors on a transient issue (a known one:
+fresh AD builds can hit an "ADWS not up yet" blip on the first pass, see
+[`docs/VALIDATION.md`](docs/VALIDATION.md)).
+
+**6. Create team access.**
+```bash
+scripts/create-team-user.sh DSTEAM1 "Detection Range Team 1 - Splunk" dsteam1@grayhats.local DS
+```
+
+**7. Validate.**
+Walk [`docs/VALIDATION.md`](docs/VALIDATION.md) — AD/DNS, Splunk forwarder
+health (`https://<splunk-ip>:8000`, creds in
+[`docs/CREDENTIALS.md`](docs/CREDENTIALS.md)), Caldera, Atomic Red Team,
+then the end-to-end purple-team loop.
+
 ## Topology
 
 | VLAN | Host | Purpose |
@@ -59,25 +123,6 @@ plain uncompressed `.tar`, not `.tgz`).
 | `frack113.ludus_caldera_agent` | Galaxy (3rd-party) | Caldera Sandcat agent |
 | `j91321.atomic_red_team` | Galaxy (3rd-party) | Invoke-AtomicRedTeam framework + atomics |
 | `art_psmodule_prereq` | custom, `roles/art_psmodule_prereq` | Reused from the DE range — fixes a PowerShellGet incompatibility on win11-22h2 |
-
-## Deploy
-
-**Important**: `p4t12ick.ludus_ar_windows` has no auto-discovery (unlike the
-Elastic/Caldera roles) — `global_role_vars.ludus_ar_windows_splunk_ip` in
-`ds-range.yml` must be filled in with `DS-splunk01`'s real IP (known only
-after the range is created) before deploying.
-
-```bash
-# 1. Install roles (idempotent to re-run)
-scripts/install-roles.sh
-
-# 2. Create the range first to learn the IP scheme, fill in
-#    ludus_ar_windows_splunk_ip in ds-range.yml, THEN:
-scripts/deploy.sh DS
-
-# 3. Create team access
-scripts/create-team-user.sh DSTEAM1 "Detection Range Team 1 - Splunk" dsteam1@grayhats.local DS
-```
 
 ## Docs
 
