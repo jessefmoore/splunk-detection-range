@@ -44,7 +44,7 @@ seen it — see [`roles/ROLE_CONVENTIONS.md`](roles/ROLE_CONVENTIONS.md).
 
 **3. Create the range — then learn its IP scheme.**
 ```bash
-ludus range create --name "Splunk Detection Range" --rangeid DS
+ludus range create --name "Splunk Detection Range" -r DS
 ludus range list -r DS          # note the rangeNumber, e.g. 31
 ```
 `p4t12ick.ludus_ar_windows` (Splunk UF) has **no auto-discovery** — unlike
