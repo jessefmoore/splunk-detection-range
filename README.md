@@ -244,7 +244,8 @@ plain uncompressed `.tar`, not `.tgz`).
 ## Walkthrough.
 By [@jessefmoore](https://x.com/jessefmore) Helping others do this too that like video walkthrus.
 
-[![Video Title](https://img.youtu.be/6niWSUw9MoE/Blueprints.png)]([https://youtu.be/8ksRU_b2rFs?si=oUJMhZ2TlNVYUZfv](https://youtu.be/6niWSUw9MoE))
+[![Video Title](https://img.youtube.com/vi/6niWSUw9MoE/hqdefault.jpg)](https://youtu.be/6niWSUw9MoE)
+
 ## Recognition and Contributions
-- [Bad Sector Labs](https://twitter.com/badsectorlabs) for making an awesome tool to easily deploy and purge lab environments via proxmox.  
+- [Bad Sector Labs](https://twitter.com/badsectorlabs) for making an awesome tool to easily deploy and purge lab environments via proxmox. 
 
