@@ -239,3 +239,12 @@ plain uncompressed `.tar`, not `.tgz`).
       on DS-dc01/DS-win01, Splunk Enterprise + add-ons on DS-splunk01, ART on
       DS-artwin01. Live confirmation of forwarder status: Splunk web UI at
       `https://10.31.40.35:8000` (creds in `docs/CREDENTIALS.md`).
+
+## YouTube video of me walking thru this. It's mostly did the video in one sitting, so excuse the errors.
+## Walkthrough.
+By [@jessefmoore](https://x.com/jessefmore) Helping others do this too that like video walkthrus.
+
+[![Video Title](https://img.youtu.be/6niWSUw9MoE/Blueprints.png)]([https://youtu.be/8ksRU_b2rFs?si=oUJMhZ2TlNVYUZfv](https://youtu.be/6niWSUw9MoE))
+## Recognition and Contributions
+- [Bad Sector Labs](https://twitter.com/badsectorlabs) for making an awesome tool to easily deploy and purge lab environments via proxmox.  
+
