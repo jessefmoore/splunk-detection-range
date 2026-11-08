@@ -16,6 +16,26 @@ standalone Atomic Red Team Windows11 to augment red team operations.
 
 Full details: [`docs/NETWORK.md`](docs/NETWORK.md), [`docs/VMS.md`](docs/VMS.md).
 
+## Roles
+
+| Role | Source | Purpose |
+|---|---|---|
+| `p4t12ick.ludus_ar_splunk` | Galaxy (3rd-party) | Splunk Enterprise server |
+| `p4t12ick.ludus_ar_windows` | Galaxy (3rd-party) | Splunk Universal Forwarder + Sysmon/auditing on Windows endpoints (also bundles Atomic Red Team) |
+| `frack113.ludus_caldera_server` | Galaxy (3rd-party) | Caldera C2 server |
+| `frack113.ludus_caldera_agent` | Galaxy (3rd-party) | Caldera Sandcat agent |
+| `j91321.atomic_red_team` | Galaxy (3rd-party) | Invoke-AtomicRedTeam framework + atomics |
+| `art_psmodule_prereq` | custom, `roles/art_psmodule_prereq` | Reused from the DE range — fixes a PowerShellGet incompatibility on win11-22h2 |
+
+## Docs
+
+- [`docs/NETWORK.md`](docs/NETWORK.md) — VLANs, IP scheme, routing policy
+- [`docs/VMS.md`](docs/VMS.md) — full VM inventory, specs, role sourcing, DC01 template risk
+- [`docs/AD-INTEGRATION.md`](docs/AD-INTEGRATION.md) — domain, accounts, agent discovery
+- [`docs/ACCESS-CONTROL.md`](docs/ACCESS-CONTROL.md) — team user / Proxmox console-only access
+- [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md) — master credential sheet
+- [`docs/VALIDATION.md`](docs/VALIDATION.md) — post-deploy validation checklist
+- [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) — runbook for rebuilding a `ludus-source-bsl` template from scratch
 
 - **Range ID:** `DS`
 - **AD domain:** `grayhats.local` (NetBIOS `GRAYHATS`), fully isolated network
@@ -205,26 +225,6 @@ runbook (including two non-obvious gotchas: `deleteTemplate` removes the
 whole definition, not just the image, and `addTemplateFromTar` requires a
 plain uncompressed `.tar`, not `.tgz`).
 
-## Roles
-
-| Role | Source | Purpose |
-|---|---|---|
-| `p4t12ick.ludus_ar_splunk` | Galaxy (3rd-party) | Splunk Enterprise server |
-| `p4t12ick.ludus_ar_windows` | Galaxy (3rd-party) | Splunk Universal Forwarder + Sysmon/auditing on Windows endpoints (also bundles Atomic Red Team) |
-| `frack113.ludus_caldera_server` | Galaxy (3rd-party) | Caldera C2 server |
-| `frack113.ludus_caldera_agent` | Galaxy (3rd-party) | Caldera Sandcat agent |
-| `j91321.atomic_red_team` | Galaxy (3rd-party) | Invoke-AtomicRedTeam framework + atomics |
-| `art_psmodule_prereq` | custom, `roles/art_psmodule_prereq` | Reused from the DE range — fixes a PowerShellGet incompatibility on win11-22h2 |
-
-## Docs
-
-- [`docs/NETWORK.md`](docs/NETWORK.md) — VLANs, IP scheme, routing policy
-- [`docs/VMS.md`](docs/VMS.md) — full VM inventory, specs, role sourcing, DC01 template risk
-- [`docs/AD-INTEGRATION.md`](docs/AD-INTEGRATION.md) — domain, accounts, agent discovery
-- [`docs/ACCESS-CONTROL.md`](docs/ACCESS-CONTROL.md) — team user / Proxmox console-only access
-- [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md) — master credential sheet
-- [`docs/VALIDATION.md`](docs/VALIDATION.md) — post-deploy validation checklist
-- [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) — runbook for rebuilding a `ludus-source-bsl` template from scratch
 
 ## Status
 
