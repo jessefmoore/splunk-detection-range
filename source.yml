@@ -1,0 +1,7 @@
+manifest_version: 1
+name: "Splunk Detection Range"
+description: "Purple-team Ludus blueprint: Caldera red team operations against a grayhats.local AD environment, defended and detected with Splunk, plus a standalone Atomic Red Team sandbox."
+authors:
+  - "Jesse Moore <jesse.f.moore@gmail.com>"
+homepage: https://github.com/jessefmoore/splunk-detection-range
+license: MIT

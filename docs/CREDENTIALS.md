@@ -1,9 +1,12 @@
 # DS — Master Credential Sheet
 
-**Keep this repo private.** Every credential below is a default committed to
-`ds-range.yml` / `global_role_vars` for reproducibility, and is fully
-overridable before deploy. Distinct from the sibling DE range's credentials
-(no password reuse across ranges). Rotate before any public exposure.
+**This repo is public.** Every credential below is a lab-only default
+committed to `blueprints/splunk-detection-range/range-config.yml` /
+`global_role_vars` for reproducibility, and is fully overridable before
+deploy. These are isolated-lab defaults, not real secrets — still, change
+them in your own `range-config.yml` before deploying if you want
+non-default credentials. Distinct from the sibling DE range's credentials
+(no password reuse across ranges).
 
 ## Active Directory (grayhats.local)
 
@@ -43,5 +46,5 @@ DE range.
 ## How to override before deploy
 
 Every value above lives under `defaults:` or `global_role_vars:` in
-`ds-range.yml` — edit the file before deploying. Nothing is hardcoded
-inside any role.
+`blueprints/splunk-detection-range/range-config.yml` — edit the file before
+deploying. Nothing is hardcoded inside any role.

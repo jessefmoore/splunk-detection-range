@@ -69,7 +69,7 @@ tried — see `docs/REBUILD-NOTES.md` for the exact procedure.
 | `p4t12ick.ludus_ar_windows` | Ansible Galaxy (3rd-party) | already installed, v1.1.2 |
 | `frack113.ludus_caldera_server` / `_agent` | Ansible Galaxy (3rd-party) | reused from DE range |
 | `j91321.atomic_red_team` | Ansible Galaxy (3rd-party) | reused from DE range |
-| `art_psmodule_prereq` | custom, `roles/art_psmodule_prereq` | reused from DE range (user-scoped on this server, no reinstall needed) |
+| `art_psmodule_prereq` | custom, vendored in `ansible/roles/art_psmodule_prereq` | installed automatically via `ludus source add --all` |
 
 ## Splunk UF IP wiring (no auto-discovery)
 
@@ -78,11 +78,9 @@ via Ludus's `search_roles` filter), `p4t12ick.ludus_ar_windows` needs
 `ludus_ar_windows_splunk_ip` as a **literal IP address** — confirmed from
 the role's actual `defaults/main.yml` (default value `10.2.20.1`, clearly a
 placeholder meant to be overridden). No Ludus-native auto-discovery or
-`depends_on`-equivalent exists for this value, so the build process is:
-1. `createRange` first, to learn the auto-assigned range number.
-2. Compute `DS-splunk01`'s real IP (`10.31.40.35`).
-3. Fill that IP into `global_role_vars.ludus_ar_windows_splunk_ip` in
-   `ds-range.yml` before pushing config / deploying.
+`depends_on`-equivalent exists for this value, so `range-config.yml`
+templates it directly: `10.{{ range_second_octet }}.40.35` — no manual edit
+needed before deploying, on this range or any other.
 
 ## Purpose of each host
 

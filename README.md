@@ -4,6 +4,9 @@ A Ludus-built purple-team range: Caldera red team operations against a small
 `grayhats.local` AD environment, defended/detected with Splunk, plus a
 standalone Atomic Red Team Windows11 to augment red team operations.
 
+This repo is a **[Ludus source](https://docs.ludus.cloud/docs/using-ludus/sources)**
+— add it to your Ludus server and deploy the whole range in 3 commands.
+
 ## Topology
 
 | VLAN | Host | Purpose |
@@ -25,7 +28,7 @@ Full details: [`docs/NETWORK.md`](docs/NETWORK.md), [`docs/VMS.md`](docs/VMS.md)
 | `frack113.ludus_caldera_server` | Galaxy (3rd-party) | Caldera C2 server |
 | `frack113.ludus_caldera_agent` | Galaxy (3rd-party) | Caldera Sandcat agent |
 | `j91321.atomic_red_team` | Galaxy (3rd-party) | Invoke-AtomicRedTeam framework + atomics |
-| `art_psmodule_prereq` | custom, `roles/art_psmodule_prereq` | Reused from the DE range — fixes a PowerShellGet incompatibility on win11-22h2 |
+| `art_psmodule_prereq` | custom, vendored at `ansible/roles/art_psmodule_prereq` | Fixes a PowerShellGet incompatibility on win11-22h2 before Atomic Red Team runs |
 
 ## Docs
 
@@ -36,81 +39,64 @@ Full details: [`docs/NETWORK.md`](docs/NETWORK.md), [`docs/VMS.md`](docs/VMS.md)
 - [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md) — master credential sheet
 - [`docs/VALIDATION.md`](docs/VALIDATION.md) — post-deploy validation checklist
 - [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) — runbook for rebuilding a `ludus-source-bsl` template from scratch
+- [`ansible/README.md`](ansible/README.md) — vendored custom role conventions
 
 - **Range ID:** `DS`
 - **AD domain:** `grayhats.local` (NetBIOS `GRAYHATS`), fully isolated network
-- **Built and deployed via the Ludus MCP server** (no local `ludus` CLI used
-  for this build; `scripts/*.sh` are provided for CLI-based operation later)
 
-## Quick Start to install on your other Ludus Server
+## Quick Start — deploy on your Ludus server
 
-Deploying this range from scratch (fresh Ludus server, or after a teardown
-of `DS`) takes these steps, in order. 
-
-Commands shown both ways — via the
-Ludus MCP server (what this repo was actually built with) and the
-equivalent `ludus` CLI command, for whichever you're using.
-
-**1. Confirm/build the templates this range needs.**
-`win2025-server-x64-tpm-template`, `win11-22h2-x64-enterprise-template`,
-`ubuntu-24.04-x64-server-template`, `debian-13-x64-server-template`
-(router). Check with `getTemplates` — if any show `built: false`:
+**Prerequisite:** this range needs `win2025-server-x64-tpm-template` and
+`debian-13-x64-server-template`, which come from
+[`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
+rather than Ludus's stock template set. If `ludus templates list` doesn't
+already show them built:
 ```bash
-scripts/build-templates.sh                      # CLI
-# or: mcp__ludus__call_ludus_api buildTemplates, body {"templates": [...]}
+ludus source add https://github.com/badsectorlabs/ludus-source-bsl --all
+ludus templates build
 ```
-If `win2025-server-x64-tpm-template` ever misbehaves (DC01 goes
-`unreachable` during AD promotion), rebuild it fresh before assuming it's
-broken — see [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md). That fixed
-it on this exact server; the template source itself is fine.
 
-**2. Install the roles.**
+**Then, the 3 commands to deploy this range:**
 ```bash
-scripts/install-roles.sh
+ludus source add https://github.com/jessefmoore/splunk-detection-range --all
+ludus blueprint apply <sourceID>/splunk-detection-range    # ludus source list to get <sourceID>
+ludus range deploy
 ```
-This installs the 4 third-party Galaxy roles. `art_psmodule_prereq`
-(custom) needs a one-time tarball upload if this is a server that's never
-seen it — see [`roles/ROLE_CONVENTIONS.md`](roles/ROLE_CONVENTIONS.md).
-
-**3. Create the range — then learn its IP scheme.**
-```bash
-ludus range create --name "Splunk Detection Range" -r DS
-ludus range list -r DS          # note the rangeNumber, e.g. 31
-```
-`p4t12ick.ludus_ar_windows` (Splunk UF) has **no auto-discovery** — unlike
-the Elastic/Caldera roles, it needs a literal IP. So this step has to
-happen *before* you can finalize the config.
-
-**4. Fill in the Splunk server's real IP.**
-Edit `ds-range.yml`:
-```yaml
-global_role_vars:
-  ludus_ar_windows_splunk_ip: "10.<range_number>.40.35"   # DS-splunk01
-```
-
-**5. Push config and deploy.**
-```bash
-scripts/deploy.sh DS
-```
-Expect 1-3 hours. Deploys are idempotent — safe to re-run
-`ludus range deploy -r DS` if it errors on a transient issue (a known one:
+Expect 1-3 hours for all VMs + AD + roles. Deploys are idempotent — safe to
+re-run `ludus range deploy` if it errors on a transient issue (a known one:
 fresh AD builds can hit an "ADWS not up yet" blip on the first pass, see
 [`docs/VALIDATION.md`](docs/VALIDATION.md)).
 
-**6. Create team access.**
+`ludus source add --all` installs this blueprint's roles automatically
+(3 Galaxy roles + the vendored `art_psmodule_prereq`), and the
+`ludus_ar_windows_splunk_ip` value needed by the Splunk Universal Forwarder
+role is templated with `{{ range_second_octet }}` in `range-config.yml` —
+no manual IP edit required, unlike earlier revisions of this repo.
+
+**Optional — team access, once deployed:**
 ```bash
 scripts/create-team-user.sh DSTEAM1 "Detection Range Team 1 - Splunk" dsteam1@grayhats.local DS
 ```
 
-**7. Validate.**
-Walk [`docs/VALIDATION.md`](docs/VALIDATION.md) — AD/DNS, Splunk forwarder
-health (`https://<splunk-ip>:8000`, creds in
+**Validate:** walk [`docs/VALIDATION.md`](docs/VALIDATION.md) — AD/DNS,
+Splunk forwarder health (`https://<splunk-ip>:8000`, creds in
 [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md)), Caldera, Atomic Red Team,
 then the end-to-end purple-team loop.
 
+### Alternative: CLI scripts, no blueprint
+
+If you'd rather drive this with the `ludus` CLI directly instead of
+`ludus source add` / `blueprint apply` (e.g. scripting against the raw
+`range-config.yml`), `scripts/*.sh` cover the same steps:
+```bash
+scripts/build-templates.sh   # only if templates aren't already built
+scripts/install-roles.sh     # installs the Galaxy roles + the custom one
+scripts/deploy.sh DS         # pushes blueprints/splunk-detection-range/range-config.yml and deploys
+```
+
 ## Gotchas if you had preexisting templates in Ludus Server and not BSL
 
-**1. Confirm your templates are sourced from `ludus-source-bsl`.**
+**Confirm your templates are sourced from `ludus-source-bsl`.**
 This range needs `win2025-server-x64-tpm-template`,
 `win11-22h2-x64-enterprise-template`, `ubuntu-24.04-x64-server-template`, and
 `debian-13-x64-server-template`. The first and last of those are templated
@@ -129,57 +115,16 @@ prompt during this range's own build (see "Template strategy" below and
 [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) for the full
 `deleteTemplate` → `addTemplateFromTar` → `buildTemplates` runbook).
 
+## Maintaining this blueprint
 
-# When creating a Blueprint live on server
-
-**1. Create Blueprint from existing range config file
+The blueprint under `blueprints/splunk-detection-range/` (`blueprint.yml`,
+`range-config.yml`, `requirements.yml`, `README.md`) is the canonical,
+source-of-truth config — edit it directly rather than a separate top-level
+copy. To test local edits against a live Ludus server before committing:
 ```bash
-ludus blueprint create --id splunk-detection-range --config ./ds-range.yml
+ludus blueprint create --id splunk-detection-range --config blueprints/splunk-detection-range/range-config.yml
+ludus blueprint config edit splunk-detection-range   # or edit the file and re-create
 ```
-
-**2. Change configs if you need
-```bash
-ludus blueprint config edit splunk-detection-range
-```
-
-**3. Make sure Blueprint, range-config and requirements.yml are in the repo
-Go to repo directory and 
-```bash
-mkdir blueprints
-```
-Then go to server where you are creating this Ludus Blueprint if not already
-Copy the files you need over to your repo location.
-Side note: The Kali is where I was building my Splunk-Detection-range with Claude, so I had to move files over there.
-```bash
-scp /opt/ludus/blueprints/snsqh8yg8fway0o/range-config.yml kali@10.2.10.13:/tmp
-```
-Then the requirements.yml
-```bash
-scp /opt/ludus/blueprints/snsqh8yg8fway0o/requirements.yml kali@10.2.10.13:/tmp
-```
-Move to the repo
-```bash
-splunk-detection-range/blueprints/splunk-detection-range
-```
-Create the blueprint.yml by hand
-```bash
-manifest_version: 1
-id: splunk-detection-range
-name: "Splunk Detection Range"
-description: "Purple-team range: Caldera red team ops against windows"
-version: 1.0.0
-tags: [ad, splunk, caldera, atomic-red-team, purple-team, detection]
-min_ludus_version: 2.3.10
-config: range-config.yml
-```
-
-
-# Share blueprint with specific users or groups on this server.**
-```bash
-ludus blueprint share user  splunk-detection-range <userID...>
-ludus blueprint share group splunk-detection-range <groupName...>
-```
-
 
 ### Sharing to a different Ludus server (no git access there)
 
@@ -191,16 +136,16 @@ ludus blueprint export splunk-detection-range -o splunk-detection-range.tar.gz
 # --- on the other server ---
 ludus blueprint create --import splunk-detection-range.tar.gz
 git clone https://github.com/jessefmoore/splunk-detection-range.git
-ludus ansible role add -d splunk-detection-range/roles/art_psmodule_prereq --force
+ludus ansible role add -d splunk-detection-range/ansible/roles/art_psmodule_prereq --force
 ```
 
-Given that caveat, cloning the repo directly is the simpler
-path whenever git access is available.
+Given that caveat, `ludus source add` (which pulls everything, including
+the vendored role, in one step) is the simpler path whenever git access is
+available — see Quick Start above.
 
 ## License
 
 [MIT](LICENSE) — use freely, no warranty.
-
 
 ## Template strategy
 
@@ -225,13 +170,13 @@ runbook (including two non-obvious gotchas: `deleteTemplate` removes the
 whole definition, not just the image, and `addTemplateFromTar` requires a
 plain uncompressed `.tar`, not `.tgz`).
 
-
 ## Status
 
 - [x] Range `DS` created (rangeNumber 31, IP scheme `10.31.<VLAN>.<octet>`)
 - [x] Roles confirmed installed on the Ludus server
 - [x] Team user `DSTEAM1` created, assigned console-only access to `DS`
-- [x] Config pushed (`ludus_ar_windows_splunk_ip` filled in as `10.31.40.35`)
+- [x] Config pushed (`ludus_ar_windows_splunk_ip` now templated with
+      `{{ range_second_octet }}`, no manual fill-in needed)
 - [x] **Deployed successfully** — all 5 VMs + router up, `rangeState: SUCCESS`,
       zero failed tasks across every host in the final run. `win2025-server-x64-tpm-template`
       required a fresh rebuild first (see `docs/VMS.md`/`docs/REBUILD-NOTES.md`)
@@ -239,6 +184,9 @@ plain uncompressed `.tar`, not `.tgz`).
       on DS-dc01/DS-win01, Splunk Enterprise + add-ons on DS-splunk01, ART on
       DS-artwin01. Live confirmation of forwarder status: Splunk web UI at
       `https://10.31.40.35:8000` (creds in `docs/CREDENTIALS.md`).
+- [x] Packaged as a proper [Ludus source](https://docs.ludus.cloud/docs/using-ludus/sources)
+      (`source.yml`, `blueprints/`, `ansible/roles/`) — deployable by others
+      via `ludus source add` in 3 commands.
 
 ## YouTube video of me walking thru this. It's mostly did the video in one sitting, so excuse the errors.
 ## Walkthrough.
@@ -247,5 +195,4 @@ By [@jessefmoore](https://x.com/jessefmore) Helping others do this too that like
 [![Video Title](https://img.youtube.com/vi/6niWSUw9MoE/hqdefault.jpg)](https://youtu.be/6niWSUw9MoE)
 
 ## Recognition and Contributions
-- [Bad Sector Labs](https://twitter.com/badsectorlabs) for making an awesome tool to easily deploy and purge lab environments via proxmox. 
-
+- [Bad Sector Labs](https://twitter.com/badsectorlabs) for making an awesome tool to easily deploy and purge lab environments via proxmox.

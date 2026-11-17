@@ -13,8 +13,8 @@
 #   - p4t12ick.ludus_ar_windows   (already present, v1.1.2)
 #   - frack113.ludus_caldera_server / ludus_caldera_agent (reused from DE range)
 #   - j91321.atomic_red_team                               (reused from DE range)
-#   - art_psmodule_prereq (custom, user-scoped, reused from DE range — see
-#     roles/ROLE_CONVENTIONS.md if it needs re-installing on a new server)
+#   - art_psmodule_prereq (custom, vendored in this source — see
+#     ansible/README.md if it needs re-installing on a new server)
 # =============================================================================
 set -euo pipefail
 USER_ARG=""
@@ -28,6 +28,7 @@ ludus ansible role add frack113.ludus_caldera_agent  $USER_ARG || true
 ludus ansible role add j91321.atomic_red_team        $USER_ARG || true
 
 echo "==> Done. Verify with:  ludus ansible role list $USER_ARG"
-echo "==> Note: art_psmodule_prereq is a custom local role (user-scoped on"
-echo "    this server already). If deploying fresh elsewhere, install it with:"
-echo "    ludus ansible role add -d roles/art_psmodule_prereq --force"
+echo "==> Note: art_psmodule_prereq is a custom role vendored in this source"
+echo "    (ansible/roles/art_psmodule_prereq). 'ludus source add --all' installs"
+echo "    it automatically; to install it manually instead:"
+echo "    ludus ansible role add -d ansible/roles/art_psmodule_prereq --force"
