@@ -201,7 +201,7 @@ plain uncompressed `.tar`, not `.tgz`).
       `ubuntu-24.04-x64-server-template`) are vendored in `templates/` —
       no external `ludus source add` needed for anything this range uses.
 
-## YouTube video of me walking thru this. It's mostly did the video in one sitting, so excuse the errors.
+## YouTube video of me walking thru creating the BluePrints part of this repo. I created the video in one sitting, so excuse the errors.
 ## Walkthrough.
 By [@jessefmoore](https://x.com/jessefmore) Helping others do this too that like video walkthrus.
 
