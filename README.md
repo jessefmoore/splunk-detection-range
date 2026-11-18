@@ -152,33 +152,6 @@ under [`templates/`](templates/) (`win2025-server-x64-tpm/`,
 [AGPL-3.0-or-later](templates/LICENSE-AGPL-3.0-vendored.txt) — see
 [`templates/README.md`](templates/README.md).
 
-## Template strategy
-
-4 templates needed; 2 ship with every Ludus install
-(`win11-22h2-x64-enterprise-template`, `debian-13-x64-server-template`,
-no source dependency). The other 2 —
-`win2025-server-x64-tpm-template` (DC01) and `ubuntu-24.04-x64-server-template`
-(CALDERA01/SPLUNK01) — originate from
-[`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
-and are vendored directly in this repo's [`templates/`](templates/) so this
-source needs no external `ludus source add`. See `templates/README.md` for
-provenance (pinned upstream commit) and the AGPL notice.
-
-**DC01 resolved**: the sibling DE range hit this exact template forcing an
-interactive Administrator password change on every clone, blocking WinRM,
-and substituted win2022 instead. This range's first attempt (against the
-server's existing, previously-built copy of the template) hit the
-identical symptom. A fresh rebuild from `ludus-source-bsl`'s source
-(`deleteTemplate` → re-register via `addTemplateFromTar` →
-`buildTemplates`) fixed it — DC01 promoted cleanly and the full deploy
-finished with **zero failed tasks across all 6 hosts**. Conclusion: the
-template source itself is fine; the failures were a stale/corrupted
-previously-built image on this specific server, not a Windows Server 2025
-limitation. See [`docs/VMS.md`](docs/VMS.md) for the full investigation and
-[`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) for the exact rebuild
-runbook (including two non-obvious gotchas: `deleteTemplate` removes the
-whole definition, not just the image, and `addTemplateFromTar` requires a
-plain uncompressed `.tar`, not `.tgz`).
 
 ## Status
 
