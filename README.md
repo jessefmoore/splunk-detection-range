@@ -59,9 +59,13 @@ ludus templates build
 **Then, the 3 commands to deploy this range:**
 ```bash
 ludus source add https://github.com/jessefmoore/splunk-detection-range --all
-ludus blueprint apply <sourceID>/splunk-detection-range    # ludus source list to get <sourceID>
+ludus blueprint apply <sourceID>/splunk-detection-range
 ludus range deploy
 ```
+`<sourceID>` isn't predictable up front — after `source add`, run
+`ludus source list` and copy the value from the `SOURCE ID` column for
+"Splunk Detection Range" into the `blueprint apply` command above.
+
 Expect 1-3 hours for all VMs + AD + roles. Deploys are idempotent — safe to
 re-run `ludus range deploy` if it errors on a transient issue (a known one:
 fresh AD builds can hit an "ADWS not up yet" blip on the first pass, see

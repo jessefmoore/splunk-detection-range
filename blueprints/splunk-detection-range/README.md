@@ -12,6 +12,8 @@ ludus source add https://github.com/jessefmoore/splunk-detection-range --all
 ludus blueprint apply <sourceID>/splunk-detection-range
 ludus range deploy
 ```
+`<sourceID>` comes from the `SOURCE ID` column of `ludus source list` after
+the first command — it isn't predictable up front.
 
 `win2025-server-x64-tpm-template` and `debian-13-x64-server-template` are
 sourced from [`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
