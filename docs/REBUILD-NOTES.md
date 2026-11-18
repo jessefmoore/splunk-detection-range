@@ -1,4 +1,4 @@
-# Rebuilding a Ludus template from `ludus-source-bsl`
+# Rebuilding a Ludus template
 
 Procedure used to rebuild `win2025-server-x64-tpm-template` fresh when it
 was misbehaving on this Ludus server (see `docs/VMS.md` for why). Keeping
@@ -26,19 +26,27 @@ mcp__ludus__call_ludus_api deleteTemplate, path_params {"name": "<template-name>
 just the built VM image.** After this, `getTemplates` no longer lists the
 template at all — it has to be re-registered from source, not just rebuilt.
 
-## 3. Get the exact source files — git clone, not WebFetch
+## 3. Get the exact source files
 
-Templates live under `templates/<name>/` in
-[`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl).
-Use a shallow sparse-checkout to get byte-exact files (an `Autounattend.xml`
-or `.pkr.hcl` reconstructed from a WebFetch summary could easily be subtly
-wrong and silently break the build):
+`win2025-server-x64-tpm` and `ubuntu-24.04-x64-server` are now vendored
+directly in this repo at `templates/<template-dir-name>/` (see
+`templates/README.md`) — use that copy, no re-clone needed:
+
+```bash
+cp -r templates/<template-dir-name> /tmp/<template-dir-name>
+```
+
+If you specifically want to pick up an *upstream* fix instead of this
+vendored copy (e.g. a changed ISO URL/checksum), re-clone
+[`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
+and sparse-checkout the template directory — don't reconstruct
+`Autounattend.xml`/`.pkr.hcl` from a WebFetch summary, it's easy to get
+subtly wrong and silently break the build:
 
 ```bash
 git clone --depth 1 --filter=blob:none --sparse https://github.com/badsectorlabs/ludus-source-bsl.git
 cd ludus-source-bsl
 git sparse-checkout set templates/<template-dir-name>
-git submodule update --init templates/<template-dir-name>   # if it's a submodule
 ```
 
 ## 4. Re-register it — plain uncompressed tar, not `.tgz`

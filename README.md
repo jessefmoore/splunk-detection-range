@@ -38,25 +38,18 @@ Full details: [`docs/NETWORK.md`](docs/NETWORK.md), [`docs/VMS.md`](docs/VMS.md)
 - [`docs/ACCESS-CONTROL.md`](docs/ACCESS-CONTROL.md) — team user / Proxmox console-only access
 - [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md) — master credential sheet
 - [`docs/VALIDATION.md`](docs/VALIDATION.md) — post-deploy validation checklist
-- [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) — runbook for rebuilding a `ludus-source-bsl` template from scratch
+- [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) — runbook for rebuilding a template from scratch
 - [`ansible/README.md`](ansible/README.md) — vendored custom role conventions
+- [`templates/README.md`](templates/README.md) — vendored Packer templates, provenance, licensing
 
 - **Range ID:** `DS`
 - **AD domain:** `grayhats.local` (NetBIOS `GRAYHATS`), fully isolated network
 
 ## Quick Start — deploy on your Ludus server
 
-**Prerequisite:** this range needs `win2025-server-x64-tpm-template` and
-`debian-13-x64-server-template`, which come from
-[`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
-rather than Ludus's stock template set. If `ludus templates list` doesn't
-already show them built:
-```bash
-ludus source add https://github.com/badsectorlabs/ludus-source-bsl --all
-ludus templates build
-```
-
-**Then, the 3 commands to deploy this range:**
+No other sources required — this one is fully self-contained (blueprint,
+roles, and the 2 non-stock Packer templates are all vendored here; the
+other 2 templates ship with every Ludus install). The 3 commands:
 ```bash
 ludus source add https://github.com/jessefmoore/splunk-detection-range --all
 ludus blueprint apply <sourceID>/splunk-detection-range
@@ -65,6 +58,12 @@ ludus range deploy
 `<sourceID>` isn't predictable up front — after `source add`, run
 `ludus source list` and copy the value from the `SOURCE ID` column for
 "Splunk Detection Range" into the `blueprint apply` command above.
+
+Before `range deploy`, build any vendored templates that aren't already on
+your server (`ludus templates list` to check):
+```bash
+ludus templates build
+```
 
 Expect 1-3 hours for all VMs + AD + roles. Deploys are idempotent — safe to
 re-run `ludus range deploy` if it errors on a transient issue (a known one:
@@ -98,26 +97,24 @@ scripts/install-roles.sh     # installs the Galaxy roles + the custom one
 scripts/deploy.sh DS         # pushes blueprints/splunk-detection-range/range-config.yml and deploys
 ```
 
-## Gotchas if you had preexisting templates in Ludus Server and not BSL
+## Gotchas if you already have these templates built from elsewhere
 
-**Confirm your templates are sourced from `ludus-source-bsl`.**
-This range needs `win2025-server-x64-tpm-template`,
-`win11-22h2-x64-enterprise-template`, `ubuntu-24.04-x64-server-template`, and
-`debian-13-x64-server-template`. The first and last of those are templated
-from [`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
-in this build — see "Template strategy" below. If any are missing, build
-them:
+This range needs 4 templates: `win11-22h2-x64-enterprise-template` and
+`debian-13-x64-server-template` ship with every Ludus install (nothing to
+do); `win2025-server-x64-tpm-template` and `ubuntu-24.04-x64-server-template`
+are vendored in this repo under [`templates/`](templates/) — `ludus source
+add --all` registers them, then:
 ```bash
-scripts/build-templates.sh
+ludus templates build
 ```
-**If you already have one of these templates built from somewhere other
-than the current `ludus-source-bsl` source** — the stock Ludus template
-repo, or an older local checkout of `ludus-source-bsl` predating a given
-template's definition — rebuild it fresh before trusting it. A stale image
-is exactly what caused DC01 to hang on an interactive Administrator password
-prompt during this range's own build (see "Template strategy" below and
-[`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) for the full
-`deleteTemplate` → `addTemplateFromTar` → `buildTemplates` runbook).
+**If you already have `win2025-server-x64-tpm-template` or
+`ubuntu-24.04-x64-server-template` built from somewhere else** — the stock
+Ludus template catalog, `ludus-source-bsl` directly, or an older build
+predating this repo's vendored copy — rebuild it fresh before trusting it.
+A stale image is exactly what caused DC01 to hang on an interactive
+Administrator password prompt during this range's own build (see "Template
+strategy" below and [`docs/REBUILD-NOTES.md`](docs/REBUILD-NOTES.md) for the
+full `deleteTemplate` → `addTemplateFromTar` → `buildTemplates` runbook).
 
 ## Maintaining this blueprint
 
@@ -149,21 +146,30 @@ available — see Quick Start above.
 
 ## License
 
-[MIT](LICENSE) — use freely, no warranty.
+[MIT](LICENSE) for this repo, except the two vendored template directories
+under [`templates/`](templates/) (`win2025-server-x64-tpm/`,
+`ubuntu-24.04-x64-server/`), which carry upstream's
+[AGPL-3.0-or-later](templates/LICENSE-AGPL-3.0-vendored.txt) — see
+[`templates/README.md`](templates/README.md).
 
 ## Template strategy
 
-Templates sourced from
+4 templates needed; 2 ship with every Ludus install
+(`win11-22h2-x64-enterprise-template`, `debian-13-x64-server-template`,
+no source dependency). The other 2 —
+`win2025-server-x64-tpm-template` (DC01) and `ubuntu-24.04-x64-server-template`
+(CALDERA01/SPLUNK01) — originate from
 [`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
-where possible — `debian-13-x64-server-template` (router) and
-`win2025-server-x64-tpm-template` (DC01).
+and are vendored directly in this repo's [`templates/`](templates/) so this
+source needs no external `ludus source add`. See `templates/README.md` for
+provenance (pinned upstream commit) and the AGPL notice.
 
 **DC01 resolved**: the sibling DE range hit this exact template forcing an
 interactive Administrator password change on every clone, blocking WinRM,
 and substituted win2022 instead. This range's first attempt (against the
 server's existing, previously-built copy of the template) hit the
-identical symptom. A fresh rebuild from the current `ludus-source-bsl`
-source (`deleteTemplate` → re-register via `addTemplateFromTar` →
+identical symptom. A fresh rebuild from `ludus-source-bsl`'s source
+(`deleteTemplate` → re-register via `addTemplateFromTar` →
 `buildTemplates`) fixed it — DC01 promoted cleanly and the full deploy
 finished with **zero failed tasks across all 6 hosts**. Conclusion: the
 template source itself is fine; the failures were a stale/corrupted
@@ -189,8 +195,11 @@ plain uncompressed `.tar`, not `.tgz`).
       DS-artwin01. Live confirmation of forwarder status: Splunk web UI at
       `https://10.31.40.35:8000` (creds in `docs/CREDENTIALS.md`).
 - [x] Packaged as a proper [Ludus source](https://docs.ludus.cloud/docs/using-ludus/sources)
-      (`source.yml`, `blueprints/`, `ansible/roles/`) — deployable by others
-      via `ludus source add` in 3 commands.
+      (`source.yml`, `blueprints/`, `ansible/roles/`, `templates/`) —
+      deployable by others via `ludus source add` in 3 commands.
+- [x] Fully self-contained: the 2 non-stock templates (`win2025-server-x64-tpm-template`,
+      `ubuntu-24.04-x64-server-template`) are vendored in `templates/` —
+      no external `ludus source add` needed for anything this range uses.
 
 ## YouTube video of me walking thru this. It's mostly did the video in one sitting, so excuse the errors.
 ## Walkthrough.

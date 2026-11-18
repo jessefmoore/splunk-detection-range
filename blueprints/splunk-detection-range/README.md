@@ -15,11 +15,13 @@ ludus range deploy
 `<sourceID>` comes from the `SOURCE ID` column of `ludus source list` after
 the first command — it isn't predictable up front.
 
-`win2025-server-x64-tpm-template` and `debian-13-x64-server-template` are
-sourced from [`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
-— add that source and `ludus templates build` first if your server doesn't
-already have them built. See the repo root [`README.md`](../../README.md)
-for full prerequisites.
+No other sources needed — `win2025-server-x64-tpm-template` and
+`ubuntu-24.04-x64-server-template` are vendored in this repo's
+[`templates/`](../../templates/) (originally from
+[`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl),
+see `templates/README.md` for provenance/license); `win11-22h2-x64-enterprise-template`
+and `debian-13-x64-server-template` ship with every Ludus install. Run
+`ludus templates build` before `range deploy` if any aren't built yet.
 
 ## Network Diagram
 
@@ -77,5 +79,5 @@ in isolation before running them against the live AD hosts.
 ## Acknowledgments
 
 - [Bad Sector Labs](https://twitter.com/badsectorlabs) for Ludus and the
-  `win2025-server-x64-tpm-template` / `debian-13-x64-server-template`
-  Packer templates this blueprint builds on.
+  `win2025-server-x64-tpm-template` / `ubuntu-24.04-x64-server-template`
+  Packer templates (vendored in `templates/`) this blueprint builds on.

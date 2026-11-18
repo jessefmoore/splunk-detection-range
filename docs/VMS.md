@@ -12,13 +12,20 @@ This range mirrors the sibling `elastic-detection-range` (range `DE`) exactly
 in shape — same VLAN layout, same VM count, same Caldera/ART setup — with
 the Elastic stack swapped for Splunk.
 
-## Template sourcing: `ludus-source-bsl` where possible
+## Template sourcing
 
-Per project convention, templates are sourced from
+Of the 4 templates this range needs, 2 ship with every Ludus install
+(`win11-22h2-x64-enterprise-template`, `debian-13-x64-server-template` —
+no source needed, despite earlier revisions of this doc claiming debian-13
+came from `ludus-source-bsl`, which was incorrect). The other 2
+(`win2025-server-x64-tpm-template` for DC01, `ubuntu-24.04-x64-server-template`
+for CALDERA01/SPLUNK01) originate from
 [`badsectorlabs/ludus-source-bsl`](https://github.com/badsectorlabs/ludus-source-bsl)
-when available: `debian-13-x64-server-template` (router) and
-`win2025-server-x64-tpm-template` (DC01) both come from that repo's
-`templates/` directory.
+and are now vendored directly in this repo under
+[`templates/`](../templates/) so this source has zero external
+`ludus source add` dependencies — see [`templates/README.md`](../templates/README.md)
+for provenance and the AGPL-3.0-or-later notice that applies to those two
+vendored directories.
 
 ## DC01 template resolution: `win2025-server-x64-tpm-template` — RESOLVED
 

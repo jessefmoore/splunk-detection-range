@@ -23,10 +23,13 @@
 # below is templated with {{ range_second_octet }} so it resolves correctly
 # for every range, no manual edit required.
 #
-# Templates: sourced from https://github.com/badsectorlabs/ludus-source-bsl
-# where possible (debian-13 router, win2025-tpm DC). See docs/VMS.md for the
-# win2025-server-x64-tpm-template risk: read directly from ludus-source-bsl's
-# Autounattend.xml — it does NOT configure a forced password change, so the
+# Templates: win11-22h2/debian-13 ship with Ludus core; win2025-tpm (DC01)
+# and ubuntu-24.04-server (CALDERA01/SPLUNK01) originate from
+# https://github.com/badsectorlabs/ludus-source-bsl and are vendored in this
+# repo's templates/ (see templates/README.md) — zero external source needed.
+# See docs/VMS.md for the win2025-server-x64-tpm-template risk: read
+# directly from ludus-source-bsl's Autounattend.xml — it does NOT configure
+# a forced password change, so the
 # interactive Administrator password prompt seen on the DE range's first two
 # attempts is likely a Windows Server 2025 runtime behavior, not a simple
 # unattend bug. Bad Sector Labs' own ad-elastic-range blueprint uses win2022
@@ -150,7 +153,7 @@ ludus:
 # =============================================================================
 # ROUTER — pinned to debian-13-x64-server-template directly (proven on this
 # server during the DE range build; no need to repeat the debian11->12->13
-# saga here). Sourced from ludus-source-bsl.
+# saga here). Ships with Ludus core — no external source needed.
 # =============================================================================
 router:
   template: debian-13-x64-server-template
